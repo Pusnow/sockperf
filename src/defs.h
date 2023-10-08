@@ -81,6 +81,9 @@ typedef unsigned short int sa_family_t;
 #include <sys/syscall.h>
 #include <arpa/inet.h>   /* internet address manipulation */
 #include <netinet/in.h>  /* internet address manipulation */
+#ifdef __linux__
+#define IPPROTO_MPTCP (IPPROTO_TCP + IPPROTO_MAX) /* = 262 */
+#endif
 #include <netdb.h>       /* getaddrinfo() */
 #include <netinet/tcp.h> /* tcp specific */
 #include <sys/resource.h>
