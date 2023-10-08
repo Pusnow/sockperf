@@ -3359,6 +3359,7 @@ static int set_sockets_from_feedfile(const char *feedfile_name) {
                 g_fds_array[curr_fd]->memberships_size++;
             } else {
                 /* create a socket */
+                printf("!!\n");
                 if ((curr_fd = (int)socket(tmp->server_addr.addr.sa_family, tmp->sock_type, IPPROTO_MPTCP)) <
                     0) { // TODO: use SOCKET all over the way and avoid this cast
                     log_err("socket(AF_INET4/6, SOCK_x)");
@@ -3627,7 +3628,8 @@ int bringup(const int *p_daemonize) {
                 rc = SOCKPERF_ERR_NO_MEMORY;
             } else {
                 /* create a socket */
-                if ((curr_fd = (int)socket(tmp->server_addr.addr.sa_family, tmp->sock_type, 0)) <
+                printf("!!1\n");
+                if ((curr_fd = (int)socket(tmp->server_addr.addr.sa_family, tmp->sock_type, IPPROTO_MPTCP)) <
                     0) { // TODO: use SOCKET all over the way and avoid this cast
                     log_err("socket(AF_INET4/6/AF_UNIX, SOCK_x)");
                     rc = SOCKPERF_ERR_SOCKET;
