@@ -558,6 +558,7 @@ struct fds_data {
     socklen_t server_addr_len = 0;  /**< server address length */
     int is_multicast = 0;           /**< if this socket is multicast */
     int sock_type = 0;              /**< SOCK_STREAM (tcp), SOCK_DGRAM (udp), SOCK_RAW (ip) */
+    int sock_proto = 0;              /**< 0 (tcp,udp,ip), IPPROTO_MPTCP (mptcp) */
     int next_fd = 0;
     int active_fd_count = 0;        /**< number of active connections (by default 1-for UDP; 0-for TCP) */
     int *active_fd_list = nullptr;  /**< list of fd related active connections (UDP has the same fd by default) */
@@ -787,6 +788,7 @@ struct user_params_t {
     struct sockaddr_store_t addr;
     socklen_t addr_len = 0;
     int sock_type = SOCK_DGRAM;
+    int sock_proto = 0;
     bool tcp_nodelay = true;
     bool is_nonblocked_send = false;
     int mc_ttl = 2;

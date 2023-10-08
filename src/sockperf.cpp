@@ -165,7 +165,7 @@ static int parse_common_opt(const AOPT_OBJECT *);
 static int parse_client_opt(const AOPT_OBJECT *);
 static char *display_opt(int, char *, size_t);
 static int resolve_sockaddr(const char *host, const char *port, int sock_type,
-        bool is_server_mode, sockaddr *addr, socklen_t &addr_len);
+        int sock_proto, bool is_server_mode, sockaddr *addr, socklen_t &addr_len);
 
 /*
  * List of supported general options.
@@ -414,7 +414,7 @@ static int parse_client_bind_info(const AOPT_OBJECT *common_obj, const AOPT_OBJE
 
     if (!rc && (host_str || port_str)) {
         int res = resolve_sockaddr(host_str, port_str, s_user_params.sock_type,
-                true, reinterpret_cast<sockaddr*>(&s_user_params.client_bind_info),
+                s_user_params.sock_proto, true, reinterpret_cast<sockaddr*>(&s_user_params.client_bind_info),
                 s_user_params.client_bind_info_len);
         if (res != 0) {
             log_msg("'--client_addr/--client_port': invalid host:port values: %s\n",
@@ -1718,7 +1718,7 @@ static void get_socket_address(struct addrinfo *result, struct sockaddr *addr, s
 
 //------------------------------------------------------------------------------
 static int resolve_sockaddr(const char *host, const char *port, int sock_type,
-        bool is_server_mode, sockaddr *addr, socklen_t &addr_len)
+        int sock_proto, bool is_server_mode, sockaddr *addr, socklen_t &addr_len)
 {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -1731,8 +1731,8 @@ static int resolve_sockaddr(const char *host, const char *port, int sock_type,
         // use wilcard address if host is NULL
         hints.ai_flags |= AI_PASSIVE;
     }
-    // any protocol
-    hints.ai_protocol = 0;
+
+    hints.ai_protocol = sock_proto;
     hints.ai_socktype = sock_type;
     int res;
     struct addrinfo *result;
@@ -2222,8 +2222,8 @@ static int parse_common_opt(const AOPT_OBJECT *common_obj) {
     // resolve address: -i, -p and --tcp options must be processed before
     if (!rc) {
         int res = resolve_sockaddr(host_str, port_str, s_user_params.sock_type,
-                s_user_params.mode == MODE_SERVER, (sockaddr*)&s_user_params.addr,
-                s_user_params.addr_len);
+                s_user_params.sock_proto, s_user_params.mode == MODE_SERVER,
+                (sockaddr*)&s_user_params.addr, s_user_params.addr_len);
         if (res != 0) {
             log_msg("'-i/-p': invalid host:port value: %s\n", os_get_error(res));
             rc = SOCKPERF_ERR_BAD_ARGUMENT;
@@ -3148,6 +3148,7 @@ static int set_sockets_from_feedfile(const char *feedfile_name) {
     char line[MAX_MCFILE_LINE_LENGTH];
     char *res = NULL;
     int sock_type = SOCK_DGRAM;
+    int sock_proto = 0;
     int curr_fd = 0, last_fd = 0;
 #ifdef NEED_REGEX_WORKAROUND
     regex_t regexpr_ip;
@@ -3284,7 +3285,7 @@ static int set_sockets_from_feedfile(const char *feedfile_name) {
 
         std::unique_ptr<fds_data> tmp{ new fds_data };
 
-        int res = resolve_sockaddr(addr.c_str(), port.c_str(), sock_type,
+        int res = resolve_sockaddr(addr.c_str(), port.c_str(), sock_type, sock_proto,
                 false, reinterpret_cast<sockaddr *>(&tmp->server_addr), tmp->server_addr_len);
         if (res != 0) {
             log_msg("Invalid address in line %s: %s\n", line, os_get_error(res));
@@ -3359,8 +3360,7 @@ static int set_sockets_from_feedfile(const char *feedfile_name) {
                 g_fds_array[curr_fd]->memberships_size++;
             } else {
                 /* create a socket */
-                printf("!!\n");
-                if ((curr_fd = (int)socket(tmp->server_addr.addr.sa_family, tmp->sock_type, IPPROTO_MPTCP)) <
+                if ((curr_fd = (int)socket(tmp->server_addr.addr.sa_family, tmp->sock_type, tmp->sock_proto)) <
                     0) { // TODO: use SOCKET all over the way and avoid this cast
                     log_err("socket(AF_INET4/6, SOCK_x)");
                     rc = SOCKPERF_ERR_SOCKET;
@@ -3620,6 +3620,7 @@ int bringup(const int *p_daemonize) {
             tmp->mc_source_ip_addr = s_user_params.mc_source_ip_addr;
             tmp->is_multicast = is_multicast_addr(tmp->server_addr);
             tmp->sock_type = s_user_params.sock_type;
+            tmp->sock_proto = s_user_params.sock_proto;
 
             tmp->active_fd_count = 0;
             tmp->active_fd_list = (int *)MALLOC(MAX_ACTIVE_FD_NUM * sizeof(int));
@@ -3628,8 +3629,7 @@ int bringup(const int *p_daemonize) {
                 rc = SOCKPERF_ERR_NO_MEMORY;
             } else {
                 /* create a socket */
-                printf("!!1\n");
-                if ((curr_fd = (int)socket(tmp->server_addr.addr.sa_family, tmp->sock_type, IPPROTO_MPTCP)) <
+                if ((curr_fd = (int)socket(tmp->server_addr.addr.sa_family, tmp->sock_type, tmp->sock_proto)) <
                     0) { // TODO: use SOCKET all over the way and avoid this cast
                     log_err("socket(AF_INET4/6/AF_UNIX, SOCK_x)");
                     rc = SOCKPERF_ERR_SOCKET;
