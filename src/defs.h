@@ -290,6 +290,7 @@ enum {
     OPT_HISTOGRAM,                // 46
     OPT_LOAD_XLIO,                // 47
     OPT_TCP_NB_CONN_TIMEOUT_MS,   // 48
+    OPT_MPTCP,                // 49
 #if defined(DEFINED_TLS)
     OPT_TLS
 #endif /* DEFINED_TLS */

@@ -226,6 +226,11 @@ static const AOPT_DESC common_opt_desc[] = {
       aopt_set_literal(0),
       aopt_set_string("tcp-skip-blocking-send"),
       "Enables non-blocking send operation (default OFF)." },
+#ifdef __linux__
+    { OPT_MPTCP,            AOPT_NOARG,
+      aopt_set_literal(0),                             aopt_set_string("tcp-mptcp"),
+      "Enable multi-path TCP (default OFF)." },
+#endif
     { OPT_TOS, AOPT_ARG, aopt_set_literal(0), aopt_set_string("tos"), "Allows setting tos" },
     { OPT_RX_MC_IF, AOPT_ARG, aopt_set_literal(0), aopt_set_string("mc-rx-ip", "mc-rx-if"),
       "Use mc-rx-ip (IPv4) / mc-rx-if (IPv6). Set ipv4 address / interface index of interface on which to receive multicast messages (can be other then "
@@ -2060,6 +2065,10 @@ static int parse_common_opt(const AOPT_OBJECT *common_obj) {
 
         if (!rc && aopt_check(common_obj, OPT_NONBLOCKED_SEND)) {
             s_user_params.is_nonblocked_send = true;
+        }
+
+        if (!rc && aopt_check(common_obj, OPT_MPTCP)) {
+            s_user_params.sock_proto = IPPROTO_MPTCP;
         }
 
         if (!rc && aopt_check(common_obj, OPT_RECV_LOOPING)) {
