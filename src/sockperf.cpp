@@ -165,7 +165,7 @@ static int parse_common_opt(const AOPT_OBJECT *);
 static int parse_client_opt(const AOPT_OBJECT *);
 static char *display_opt(int, char *, size_t);
 static int resolve_sockaddr(const char *host, const char *port, int sock_type,
-        int sock_proto, bool is_server_mode, sockaddr *addr, socklen_t &addr_len);
+        bool is_server_mode, sockaddr *addr, socklen_t &addr_len);
 
 /*
  * List of supported general options.
@@ -419,7 +419,7 @@ static int parse_client_bind_info(const AOPT_OBJECT *common_obj, const AOPT_OBJE
 
     if (!rc && (host_str || port_str)) {
         int res = resolve_sockaddr(host_str, port_str, s_user_params.sock_type,
-                s_user_params.sock_proto, true, reinterpret_cast<sockaddr*>(&s_user_params.client_bind_info),
+                true, reinterpret_cast<sockaddr*>(&s_user_params.client_bind_info),
                 s_user_params.client_bind_info_len);
         if (res != 0) {
             log_msg("'--client_addr/--client_port': invalid host:port values: %s\n",
@@ -1723,7 +1723,7 @@ static void get_socket_address(struct addrinfo *result, struct sockaddr *addr, s
 
 //------------------------------------------------------------------------------
 static int resolve_sockaddr(const char *host, const char *port, int sock_type,
-        int sock_proto, bool is_server_mode, sockaddr *addr, socklen_t &addr_len)
+        bool is_server_mode, sockaddr *addr, socklen_t &addr_len)
 {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -1736,8 +1736,8 @@ static int resolve_sockaddr(const char *host, const char *port, int sock_type,
         // use wilcard address if host is NULL
         hints.ai_flags |= AI_PASSIVE;
     }
-
-    hints.ai_protocol = sock_proto;
+    // any protocol
+    hints.ai_protocol = 0;
     hints.ai_socktype = sock_type;
     int res;
     struct addrinfo *result;
@@ -2231,8 +2231,8 @@ static int parse_common_opt(const AOPT_OBJECT *common_obj) {
     // resolve address: -i, -p and --tcp options must be processed before
     if (!rc) {
         int res = resolve_sockaddr(host_str, port_str, s_user_params.sock_type,
-                s_user_params.sock_proto, s_user_params.mode == MODE_SERVER,
-                (sockaddr*)&s_user_params.addr, s_user_params.addr_len);
+                s_user_params.mode == MODE_SERVER, (sockaddr*)&s_user_params.addr,
+                s_user_params.addr_len);
         if (res != 0) {
             log_msg("'-i/-p': invalid host:port value: %s\n", os_get_error(res));
             rc = SOCKPERF_ERR_BAD_ARGUMENT;
@@ -3157,7 +3157,6 @@ static int set_sockets_from_feedfile(const char *feedfile_name) {
     char line[MAX_MCFILE_LINE_LENGTH];
     char *res = NULL;
     int sock_type = SOCK_DGRAM;
-    int sock_proto = 0;
     int curr_fd = 0, last_fd = 0;
 #ifdef NEED_REGEX_WORKAROUND
     regex_t regexpr_ip;
@@ -3294,7 +3293,7 @@ static int set_sockets_from_feedfile(const char *feedfile_name) {
 
         std::unique_ptr<fds_data> tmp{ new fds_data };
 
-        int res = resolve_sockaddr(addr.c_str(), port.c_str(), sock_type, sock_proto,
+        int res = resolve_sockaddr(addr.c_str(), port.c_str(), sock_type,
                 false, reinterpret_cast<sockaddr *>(&tmp->server_addr), tmp->server_addr_len);
         if (res != 0) {
             log_msg("Invalid address in line %s: %s\n", line, os_get_error(res));
